@@ -13,7 +13,9 @@ import java.util.concurrent.TimeUnit;
 
 import rx.Observable;
 import rx.Observer;
+import rx.Subscriber;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Func2;
 import rx.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
@@ -57,29 +59,120 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        imageView = (ImageView) findViewById(R.id.imageView);
+
         example1();
+
+        //example2();
+
+        //example3();
 
     }
 
     private void example1() {
         ExampleTask task1 = new ExampleTask("task1");
         task1.execute();
-
-        //        ExampleTask task2 = new ExampleTask("task2");
-        //        task2.execute();
-
-        runRxAnimation();
+        runAnimationWithRx();
     }
 
     private void example2() {
         ExampleTask task1 = new ExampleTask("task1");
         task1.execute();
-        runRxAnimation();
+        imageView.animate().rotationBy(360).setDuration(ROTATE_ANIMATION_DURATION).setInterpolator(new AccelerateDecelerateInterpolator());
     }
 
-    protected void runRxAnimation() {
-        imageView = (ImageView) findViewById(R.id.imageView);
-        Log.v(TAG, "runRxAnimation timer");
+    private void example3() {
+        ExampleTask task1 = new ExampleTask("task1");
+        task1.execute();
+        runAnimationAndAsyncTaskWithZip();
+    }
+
+
+    protected void runAnimationWithRx() {
+        Observable<Long> animationObservable = Observable
+                .interval(ROTATE_ANIMATION_DURATION + 200, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread());
+
+        animationObservable.take(2)
+                .subscribe(new Observer<Long>() {
+                    @Override
+                    public void onCompleted() {
+                        Log.v(TAG, "Animation completed");
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Log.w(TAG, "onError " + e.getMessage());
+                    }
+
+                    @Override
+                    public void onNext(Long aLong) {
+                        Log.v(TAG, "Got element " + aLong);
+                        imageView.animate().rotationBy(360).setDuration(ROTATE_ANIMATION_DURATION).setInterpolator(new AccelerateDecelerateInterpolator());
+                    }
+                });
+    }
+
+    protected void runAnimationAndAsyncTaskWithZip() {
+        Log.v(TAG, "runAnimationAndAsyncTaskWithZip timer");
+        Observable.OnSubscribe<? extends Object> registerAppSubscriber = new Observable.OnSubscribe<Object>() {
+            @Override
+            public void call(Subscriber<? super Object> subscriber) {
+                Log.i(TAG, "Finished");
+            }
+        };
+        Observable<? extends Object> registerAppObservable = Observable.create(registerAppSubscriber);
+
+        Observable<Long> animationObservable = Observable
+                .interval(ROTATE_ANIMATION_DURATION + 200, TimeUnit.MILLISECONDS)
+                .subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread());
+
+        animationObservable.take(2)
+                .subscribe(new Observer<Long>() {
+                    @Override
+                    public void onCompleted() {
+                        Log.v(TAG, "Animation completed");
+                    }
+
+                    @Override
+                    public void onError(Throwable e) {
+                        Log.w(TAG, "onError " + e.getMessage());
+                    }
+
+                    @Override
+                    public void onNext(Long aLong) {
+                        Log.v(TAG, "Animation observable onNext: " + aLong);
+                        imageView.animate().rotationBy(360).setDuration(ROTATE_ANIMATION_DURATION).setInterpolator(new AccelerateDecelerateInterpolator());
+                    }
+                });
+
+        Observable<Object> combinedObservable = Observable.zip(animationObservable, registerAppObservable, new Func2<Long, Object, Object>() {
+            @Override
+            public Object call(Long aLong, Object o) {
+                Log.v(TAG, "Func2 finished");
+                return o;
+            }
+        });
+
+        combinedObservable.subscribe(new Subscriber<Object>() {
+            @Override
+            public void onCompleted() {
+                Log.i(TAG, "Combined observable onCompleted");
+            }
+
+            @Override
+            public void onError(Throwable e) {
+            }
+
+            @Override
+            public void onNext(Object o) {
+                Log.v(TAG, "Combined observable onNext");
+            }
+        });
+
+
         Observable
                 .interval(ROTATE_ANIMATION_DURATION + 200, TimeUnit.MILLISECONDS)
                 .subscribeOn(Schedulers.newThread())
