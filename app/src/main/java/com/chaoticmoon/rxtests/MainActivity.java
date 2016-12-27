@@ -61,26 +61,41 @@ public class MainActivity extends AppCompatActivity {
 
         imageView = (ImageView) findViewById(R.id.imageView);
 
-        example1();
+//        example1();
 
-        //example2();
+//        example2();
 
-        //example3();
+        example3();
 
     }
 
+    /**
+     * Concurrent execution by default
+     */
     private void example1() {
         ExampleTask task1 = new ExampleTask("task1");
         task1.execute();
         runAnimationWithRx();
     }
 
+
+    /**
+     * Also concurrent
+     */
     private void example2() {
         ExampleTask task1 = new ExampleTask("task1");
         task1.execute();
-        imageView.animate().rotationBy(360).setDuration(ROTATE_ANIMATION_DURATION).setInterpolator(new AccelerateDecelerateInterpolator());
+        imageView.animate().rotationBy(360).setDuration(ROTATE_ANIMATION_DURATION * 5).setInterpolator(new AccelerateDecelerateInterpolator());
     }
 
+    /**
+     * Concurrency with zip.
+     *
+     * This is commonly used for 2 api calls, or long operations for which we don't know how long they are going to take
+     * and we want to take some action after the 2 are done like combining the results
+     *
+     * The animation is a fixed timed process. And there's also no result from the animation so the combine method is trivial.
+     */
     private void example3() {
         ExampleTask task1 = new ExampleTask("task1");
         task1.execute();
